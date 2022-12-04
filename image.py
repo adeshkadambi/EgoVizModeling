@@ -21,7 +21,6 @@ class ImageContainer:
         return f"{self.name}: {vars(self)}"
 
     def get_ground_truth(self, ground_truth_data, ontology):
-        # sourcery skip: raise-specific-error
         """
         Checks if image was skipped in the ground truth data, if not, then it gets the ground truth labels.
         """
@@ -40,7 +39,7 @@ class ImageContainer:
                     self.gt_boxes.append(bbox)
                     self.gt_classes.append(ontology[gt["title"]])
                 except:
-                    raise Exception(
+                    raise ValueError(
                         f'Error in {self.name} -- {gt["title"]} not found in ontology.'
                     )
 
