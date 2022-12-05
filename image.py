@@ -107,3 +107,9 @@ class ImageContainer:
 
             self.gt_active[gt_threshold] = 1
             self.unidet_active[unidet_threshold] = 1
+    
+    def remap_classes(self, new_ontology):
+        """
+        Remaps the classes to the new ontology (i.e. combined categories).
+        """
+        pass # todo
