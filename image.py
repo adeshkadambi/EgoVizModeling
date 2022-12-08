@@ -10,15 +10,20 @@ class ImageContainer:
     """
 
     def __init__(self) -> None:
-        self.name = None
+        self.name, self.path, self.image = None, None, None
         self.gt_boxes, self.gt_classes = None, None
         self.gt_active_boxes, self.gt_active_classes = None, None
-        self.unidet_boxes, self.unidet_classes, self.unidet_scores = None, None, None
-        (
-            self.unidet_active_boxes,
-            self.unidet_active_classes,
-            self.unidet_active_scores,
-        ) = (None, None, None)
+
+        self.unidet_boxes = None
+        self.unidet_classes = None
+        self.unidet_scores = None
+        self.unidet_ious = None
+
+        self.unidet_active_boxes = None
+        self.unidet_active_classes = None
+        self.unidet_active_scores = None
+        self.unidet_active_ious = None
+
         self.shan_boxes, self.shan_scores = None, None
 
     def __repr__(self) -> str:
@@ -106,37 +111,42 @@ class ImageContainer:
         gt_active = np.zeros(len(self.gt_boxes))
         unidet_active = np.zeros(len(self.unidet_boxes))
 
-        if (
-            len(self.shan_boxes) > 0
-            and len(self.unidet_boxes) > 0
-            and len(self.gt_boxes) > 0
-        ):
-            gt_boxes = torch.from_numpy(self.gt_boxes)
-            unidet_boxes = torch.from_numpy(self.unidet_boxes)
+        if len(self.shan_boxes) > 0:
+
             shan_boxes = torch.from_numpy(self.shan_boxes)
 
-            ious_gt = torchvision.ops.box_iou(gt_boxes, shan_boxes).numpy()
-            ious_unidet = torchvision.ops.box_iou(unidet_boxes, shan_boxes).numpy()
+            if len(self.gt_boxes) > 0:
+                gt_boxes = torch.from_numpy(self.gt_boxes)
+                ious_gt = torchvision.ops.box_iou(gt_boxes, shan_boxes).numpy()
+                gt_threshold = np.argwhere(ious_gt > threshold)[:, 0]
+                gt_active[gt_threshold] = 1
 
-            gt_threshold = np.argwhere(ious_gt > threshold)[:, 0]
-            unidet_threshold = np.argwhere(ious_unidet > threshold)[:, 0]
+                self.gt_active_boxes = np.array(self.gt_boxes[gt_active == 1])
+                self.gt_active_classes = np.array(self.gt_classes[gt_active == 1])
 
-            gt_active[gt_threshold] = 1
-            unidet_active[unidet_threshold] = 1
+            else:
+                self.gt_active_boxes = np.array([])
+                self.gt_active_classes = np.array([])
 
-            self.gt_active_boxes = self.gt_boxes[gt_active == 1] 
-            self.gt_active_classes = self.gt_classes[gt_active == 1]
+            if len(self.unidet_boxes) > 0:
+                unidet_boxes = torch.from_numpy(self.unidet_boxes)
+                ious_unidet = torchvision.ops.box_iou(unidet_boxes, shan_boxes).numpy()
+                unidet_threshold = np.argwhere(ious_unidet > threshold)[:, 0]
+                unidet_active[unidet_threshold] = 1
 
-            self.unidet_active_boxes = self.unidet_boxes[unidet_active == 1]
-            self.unidet_active_classes = self.unidet_classes[unidet_active == 1]
-            self.unidet_active_scores = self.unidet_scores[unidet_active == 1]
-        else:
-            self.gt_active_boxes = []
-            self.gt_active_classes = []
-
-            self.unidet_active_boxes = []
-            self.unidet_active_classes = []
-            self.unidet_active_scores = []
+                self.unidet_active_boxes = np.array(
+                    self.unidet_boxes[unidet_active == 1]
+                )
+                self.unidet_active_classes = np.array(
+                    self.unidet_classes[unidet_active == 1]
+                )
+                self.unidet_active_scores = np.array(
+                    self.unidet_scores[unidet_active == 1]
+                )
+            else:
+                self.unidet_active_boxes = np.array([])
+                self.unidet_active_classes = np.array([])
+                self.unidet_active_scores = np.array([])
 
     def remap_classes(self, mapper):
         """
@@ -151,16 +161,56 @@ class ImageContainer:
 
         for new_class, old_classes in mapper.items():
             try:
-                self.gt_classes[np.isin(self.gt_classes, old_classes)] = new_class
-                self.gt_active_classes[
-                    np.isin(self.gt_active_classes, old_classes)
-                ] = new_class
-                self.unidet_classes[
-                    np.isin(self.unidet_classes, old_classes)
-                ] = new_class
-                self.unidet_active_classes[
-                    np.isin(self.unidet_active_classes, old_classes)
-                ] = new_class
+                if len(self.gt_classes) > 0:
+                    self.gt_classes[np.isin(self.gt_classes, old_classes)] = new_class
+
+                if len(self.gt_active_classes) > 0:
+                    self.gt_active_classes[
+                        np.isin(self.gt_active_classes, old_classes)
+                    ] = new_class
+
+                if len(self.unidet_classes) > 0:
+                    self.unidet_classes[
+                        np.isin(self.unidet_classes, old_classes)
+                    ] = new_class
+
+                if len(self.unidet_active_classes) > 0:
+                    self.unidet_active_classes[
+                        np.isin(self.unidet_active_classes, old_classes)
+                    ] = new_class
+
             except Exception:
                 warnings.warn(f"Warning: No classes remapped for {self.name}.")
                 continue
+
+    def compute_max_ious(self):
+        """
+        Computes the maximum ious between the ground truth and unidet predictions.
+        """
+        if len(self.gt_boxes) > 0 and len(self.unidet_boxes) > 0:
+            self.unidet_ious = (
+                torchvision.ops.box_iou(
+                    torch.from_numpy(self.gt_boxes), torch.from_numpy(self.unidet_boxes)
+                )
+                .numpy()
+                .max(axis=0)
+            )
+        else:
+            self.unidet_ious = np.array([])
+
+        if (
+            self.gt_boxes is not None
+            and self.unidet_boxes is not None
+            and len(self.gt_boxes) > 0
+            and len(self.unidet_boxes) > 0
+        ):
+            self.unidet_active_ious = (
+                torchvision.ops.box_iou(
+                    torch.from_numpy(self.gt_active_boxes),
+                    torch.from_numpy(self.unidet_active_boxes),
+                )
+                .numpy()
+                .max(axis=0)
+            )
+        else:
+            self.unidet_active_ious = np.array([])
