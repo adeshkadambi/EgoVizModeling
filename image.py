@@ -1,7 +1,9 @@
+"""Object that stores the file path of the image, the ground truth labels, and shan/unidet predictions."""
+
+import warnings
 import numpy as np
 import torch
 import torchvision
-import warnings
 
 
 class ImageContainer:
@@ -10,21 +12,26 @@ class ImageContainer:
     """
 
     def __init__(self) -> None:
-        self.name, self.path, self.image = None, None, None
-        self.gt_boxes, self.gt_classes = None, None
-        self.gt_active_boxes, self.gt_active_classes = None, None
+        self.name = None
 
-        self.unidet_boxes = None
-        self.unidet_classes = None
-        self.unidet_scores = None
-        self.unidet_ious = None
+        # targets
+        self.gt_boxes = np.array([])
+        self.gt_classes = np.array([])
+        self.gt_active_boxes = np.array([])
+        self.gt_active_classes = np.array([])
 
-        self.unidet_active_boxes = None
-        self.unidet_active_classes = None
-        self.unidet_active_scores = None
-        self.unidet_active_ious = None
+        # unidet
+        self.unidet_boxes = np.array([])
+        self.unidet_classes = np.array([])
+        self.unidet_scores = np.array([])
 
-        self.shan_boxes, self.shan_scores = None, None
+        self.unidet_active_boxes = np.array([])
+        self.unidet_active_classes = np.array([])
+        self.unidet_active_scores = np.array([])
+
+        # shan
+        self.shan_boxes = np.array([])
+        self.shan_scores = np.array([])
 
     def __repr__(self) -> str:
         return f"{self.name}: {vars(self)}"
@@ -50,10 +57,10 @@ class ImageContainer:
                     ]
                     self.gt_boxes.append(bbox)
                     self.gt_classes.append(ontology[gt["title"]])
-                except:
+                except ValueError as e:
                     raise ValueError(
                         f'Error in {self.name} -- {gt["title"]} not found in ontology.'
-                    )
+                    ) from e
 
         self.gt_boxes, self.gt_classes = np.array(self.gt_boxes, dtype="int"), np.array(
             self.gt_classes
@@ -179,38 +186,6 @@ class ImageContainer:
                         np.isin(self.unidet_active_classes, old_classes)
                     ] = new_class
 
-            except Exception:
+            except:
                 warnings.warn(f"Warning: No classes remapped for {self.name}.")
                 continue
-
-    def compute_max_ious(self):
-        """
-        Computes the maximum ious between the ground truth and unidet predictions.
-        """
-        if len(self.gt_boxes) > 0 and len(self.unidet_boxes) > 0:
-            self.unidet_ious = (
-                torchvision.ops.box_iou(
-                    torch.from_numpy(self.gt_boxes), torch.from_numpy(self.unidet_boxes)
-                )
-                .numpy()
-                .max(axis=0)
-            )
-        else:
-            self.unidet_ious = np.array([])
-
-        if (
-            self.gt_boxes is not None
-            and self.unidet_boxes is not None
-            and len(self.gt_boxes) > 0
-            and len(self.unidet_boxes) > 0
-        ):
-            self.unidet_active_ious = (
-                torchvision.ops.box_iou(
-                    torch.from_numpy(self.gt_active_boxes),
-                    torch.from_numpy(self.unidet_active_boxes),
-                )
-                .numpy()
-                .max(axis=0)
-            )
-        else:
-            self.unidet_active_ious = np.array([])
