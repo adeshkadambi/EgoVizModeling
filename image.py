@@ -1,9 +1,9 @@
 """Object that stores the file path of the image, the ground truth labels, and shan/unidet predictions."""
 
-import warnings
 import numpy as np
-import torch
-import torchvision
+import pandas as pd # type: ignore
+import torch # type: ignore
+import torchvision # type: ignore
 
 
 class ImageContainer:
@@ -12,7 +12,7 @@ class ImageContainer:
     """
 
     def __init__(self) -> None:
-        self.name = None
+        self.name: str = ''
 
         # targets
         self.gt_boxes = np.array([])
@@ -39,7 +39,7 @@ class ImageContainer:
     def __str__(self) -> str:
         return f"{self.name}: {vars(self)}"
 
-    def get_ground_truth(self, ground_truth_data, ontology):
+    def get_ground_truth(self, ground_truth_data):
         """
         Checks if image was skipped in the ground truth data, if not, then it gets the ground truth labels.
         """
@@ -48,23 +48,17 @@ class ImageContainer:
 
         if not ground_truth_data["Skipped"]:
             for gt in ground_truth_data["Label"]["objects"]:
-                try:
-                    bbox = [
-                        gt["bbox"]["left"],
-                        gt["bbox"]["top"],
-                        gt["bbox"]["left"] + gt["bbox"]["width"],
-                        gt["bbox"]["top"] + gt["bbox"]["height"],
-                    ]
-                    self.gt_boxes.append(bbox)
-                    self.gt_classes.append(ontology[gt["title"]])
-                except ValueError as e:
-                    raise ValueError(
-                        f'Error in {self.name} -- {gt["title"]} not found in ontology.'
-                    ) from e
+                bbox = [
+                    gt["bbox"]["left"],
+                    gt["bbox"]["top"],
+                    gt["bbox"]["left"] + gt["bbox"]["width"],
+                    gt["bbox"]["top"] + gt["bbox"]["height"],
+                ]
+                self.gt_boxes.append(bbox)
+                self.gt_classes.append(gt["title"])
 
-        self.gt_boxes, self.gt_classes = np.array(self.gt_boxes, dtype="int"), np.array(
-            self.gt_classes
-        )
+        self.gt_boxes = np.array(self.gt_boxes, dtype="int")
+        self.gt_classes = np.array(self.gt_classes)
 
     def get_unidet_results(self, unidet_data):
         """
@@ -154,38 +148,115 @@ class ImageContainer:
                 self.unidet_active_boxes = np.array([])
                 self.unidet_active_classes = np.array([])
                 self.unidet_active_scores = np.array([])
-
-    def remap_classes(self, mapper):
-        """
-        Remaps the classes to the new ontology (i.e. combined categories).
+    
+    def remap_classes(self, mapper:dict):
+        '''
+        Remaps the classes of the ground truth and unidet predictions to the new classes.
 
         args: mapper (dict) in format:
         {
-            new_class: [old_class1, old_class2, ...],
+            label_id: {label: label, subclasses: [subclasses_ids], subclasses_names: [subclasses_names]},
             ...
         }
-        """
 
-        for new_class, old_classes in mapper.items():
-            try:
-                if len(self.gt_classes) > 0:
-                    self.gt_classes[np.isin(self.gt_classes, old_classes)] = new_class
+        Finds the current class in mapper's subclasses_names and replaces it with the label_id.
+        Also saves label to self.gt_class_names and self.unidet_class_names.
+        '''
 
-                if len(self.gt_active_classes) > 0:
-                    self.gt_active_classes[
-                        np.isin(self.gt_active_classes, old_classes)
-                    ] = new_class
+        gt_classes = self.gt_classes.copy()
+        unidet_classes = self.unidet_classes.copy()
+        gt_active_classes = self.gt_active_classes.copy()
+        unidet_active_classes = self.unidet_active_classes.copy()
+        
+        for i, gt_class in enumerate(gt_classes):
+            for key, value in mapper.items():
+                if gt_class in value['subclasses_names']:
+                    gt_classes[i] = key
 
-                if len(self.unidet_classes) > 0:
-                    self.unidet_classes[
-                        np.isin(self.unidet_classes, old_classes)
-                    ] = new_class
+        for i, unidet_class in enumerate(unidet_classes):
+            for key, value in mapper.items():
+                if unidet_class in value['subclasses']:
+                    unidet_classes[i] = key
 
-                if len(self.unidet_active_classes) > 0:
-                    self.unidet_active_classes[
-                        np.isin(self.unidet_active_classes, old_classes)
-                    ] = new_class
+        for i, gt_active_class in enumerate(gt_active_classes):
+            for key, value in mapper.items():
+                if gt_active_class in value['subclasses_names']:
+                    gt_active_classes[i] = key
 
-            except:
-                warnings.warn(f"Warning: No classes remapped for {self.name}.")
-                continue
+        for i, unidet_active_class in enumerate(unidet_active_classes):
+            for key, value in mapper.items():
+                if unidet_active_class in value['subclasses']:
+                    unidet_active_classes[i] = key
+        
+        self.gt_classes = np.array(gt_classes, dtype=np.int32)
+        self.unidet_classes = np.array(unidet_classes, dtype=np.int32)
+        self.gt_active_classes = np.array(gt_active_classes, dtype=np.int32)
+        self.unidet_active_classes = np.array(unidet_active_classes, dtype=np.int32)
+
+    def del_human_preds(self):
+        '''
+        Delete all unidet boxes, classes and scores corresponding to class = 0 (human).
+        '''
+
+        # get indexes where unidet_classes == 0
+        indexes = np.argwhere(self.unidet_classes == 0)
+
+        # delete all boxes, classes and scores corresponding to indexes
+        self.unidet_boxes = np.delete(self.unidet_boxes, indexes, axis=0)
+        self.unidet_classes = np.delete(self.unidet_classes, indexes, axis=0)
+        self.unidet_scores = np.delete(self.unidet_scores, indexes, axis=0)
+
+        # get indexes where unidet_active_classes == 0
+        indexes = np.argwhere(self.unidet_active_classes == 0)
+
+        # delete all boxes, classes and scores corresponding to indexes
+        self.unidet_active_boxes = np.delete(self.unidet_active_boxes, indexes, axis=0)
+        self.unidet_active_classes = np.delete(self.unidet_active_classes, indexes, axis=0)
+        self.unidet_active_scores = np.delete(self.unidet_active_scores, indexes, axis=0)
+
+
+def create_mapping_dict(xls_path:str, sheet_name:str='LabelSpace'):
+    '''
+    Creates a mapping dictionary from the xls file.
+    
+    args: xls_path (str) path to the xls file
+
+    xls format:
+    column 1: label (str)
+    column 2: label_id (int)
+    column 3: subclasses (comma separated)
+    column 4: subclasses_ids (comma separated)
+
+    returns: mapper (dict) in format:
+    {
+        label_id: {label: label, subclasses: [subclasses_ids], subclasses_names: [subclasses_names]},
+        ...
+    }
+    '''
+
+    mapper = {}
+
+    df = pd.read_excel(xls_path, sheet_name=sheet_name)
+    df = df.dropna(subset=['ID'])
+
+    for i, row in df.iterrows():
+        label = row['Label']
+        label_id = int(row['ID'])
+        subclasses = row['Subclasses']
+        subclasses_ids = row['Subclass ID']
+
+        if isinstance(subclasses, str):
+            # print all fields
+            print(f'Label: {label},\n label_id: {label_id},\n subclasses: {subclasses},\n subclass_ids:{subclasses_ids} \n \n')
+
+            # if subclasses_ids is a float then convert to str without decimal
+            if isinstance(subclasses_ids, float):
+                subclasses_ids = str(int(subclasses_ids))
+
+            subclasses = subclasses.split(',')
+            subclasses_ids = subclasses_ids.split(',')
+            subclasses_ids = [int(x) for x in subclasses_ids]
+
+        mapper[label_id] = {'label': label, 'subclasses': subclasses_ids, 'subclasses_names': subclasses}
+
+    return mapper

@@ -1,7 +1,7 @@
 """Module for calculation of evaluation metrics for model performance."""
 
 import torch  # type: ignore
-import numpy as np
+import numpy as np # type: ignore
 from torchvision import ops  # type: ignore
 from torchmetrics.detection.mean_ap import MeanAveragePrecision  # type: ignore
 
@@ -72,6 +72,31 @@ def batch_mean_iou(images: list[ImageContainer]):
 
     return np.mean(all_ious), np.mean(active_ious)
 
+def tp_fp_fn(pred_boxes: torch.Tensor, target_boxes: torch.Tensor, threshold: float = 0.5):
+    """Calculate true positives, false positives, and false negatives for a single image.
+
+    Args:
+        pred_boxes (torch.Tensor): Predicted bounding boxes of shape (num_boxes, 4).
+        target_boxes (torch.Tensor): Target bounding boxes of shape (num_boxes, 4).
+        threshold (float, optional): Threshold for IoU. Defaults to 0.5.
+
+    Returns:
+        int: Number of true positives.
+        int: Number of false positives.
+        int: Number of false negatives.
+    """
+    if len(pred_boxes) == 0 and len(target_boxes) == 0:
+        return 1, 0, 0
+    if len(pred_boxes) == 0 or len(target_boxes) == 0:
+        return 0, len(pred_boxes), len(target_boxes)
+
+    ious = ops.box_iou(pred_boxes, target_boxes)
+
+    tp = (ious.max(dim=1)[0] > threshold).sum().item()
+    fp = len(pred_boxes) - tp
+    fn = len(target_boxes) - tp
+
+    return tp, fp, fn
 
 def single_img_precision_recall_f1(
     pred_boxes: torch.Tensor,
@@ -96,11 +121,7 @@ def single_img_precision_recall_f1(
     if len(pred_boxes) == 0 or len(target_boxes) == 0:
         return 0.0, 0.0, 0.0
 
-    ious = ops.box_iou(pred_boxes, target_boxes)
-
-    tp = (ious.max(dim=1)[0] > threshold).sum().item()
-    fp = len(pred_boxes) - tp
-    fn = len(target_boxes) - tp
+    tp, fp, fn = tp_fp_fn(pred_boxes, target_boxes, threshold)
 
     precision = tp / (tp + fp + eps)
     recall = tp / (tp + fn + eps)
@@ -149,6 +170,47 @@ def batch_precision_recall_f1(images: list[ImageContainer]):
     )
 
 
+def batch_micro_precision_recall_f1(images: list[ImageContainer]):
+    """Calculate micro precision, recall, and f1 score for a bactch of images."""
+    
+    all_pred_boxes = torch.Tensor()
+    all_target_boxes = torch.Tensor()
+
+    active_pred_boxes = torch.Tensor()
+    active_target_boxes = torch.Tensor()
+
+    for img in images:
+        pred = torch.from_numpy(img.unidet_boxes)
+        target = torch.from_numpy(img.gt_boxes)
+
+        active_pred = torch.from_numpy(img.unidet_active_boxes)
+        active_target = torch.from_numpy(img.gt_active_boxes)
+
+        all_pred_boxes = torch.cat((all_pred_boxes, pred))
+        all_target_boxes = torch.cat((all_target_boxes, target))
+
+        active_pred_boxes = torch.cat((active_pred_boxes, active_pred))
+        active_target_boxes = torch.cat((active_target_boxes, active_target))
+
+    all_pred_boxes = all_pred_boxes.reshape(-1, 4)
+    all_target_boxes = all_target_boxes.reshape(-1, 4)
+
+    active_pred_boxes = active_pred_boxes.reshape(-1, 4)
+    active_target_boxes = active_target_boxes.reshape(-1, 4)
+
+    tp, fp, fn = tp_fp_fn(all_pred_boxes, all_target_boxes)
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    f1 = (2 * precision * recall) / (precision + recall)
+
+    tp, fp, fn = tp_fp_fn(active_pred_boxes, active_target_boxes)
+    active_precision = tp / (tp + fp)
+    active_recall = tp / (tp + fn)
+    active_f1 = (2 * active_precision * active_recall) / (active_precision + active_recall)
+
+    return precision, recall, f1, active_precision, active_recall, active_f1
+
+
 # Detection Metrics
 # --------------------------------------------------
 
@@ -161,7 +223,7 @@ def single_img_per_class_precision_recall_f1(
     threshold: float = 0.5,
     eps: float = 1e-10,
 ):
-    """Calculate Precision, Recall, and F1 score for a single image per class."""
+    """Calculate Macro Precision, Recall, and F1-Score for a single image."""
 
     if len(pred_boxes) == 0 and len(target_boxes) == 0:
         return 1.0, 1.0, 1.0
@@ -199,15 +261,15 @@ def single_img_per_class_precision_recall_f1(
         f1s[i] = f1 if f1 <= 1 else np.nan
 
     # Average over classes
-    precisions = np.nanmean(precisions)
-    recalls = np.nanmean(recalls)
-    f1s = np.nanmean(f1s)
+    precisions = np.nanmean(precisions)  # type: ignore
+    recalls = np.nanmean(recalls)  # type: ignore
+    f1s = np.nanmean(f1s)  # type: ignore
 
     return precisions, recalls, f1s
 
 
 def batch_macro_precision_recall_f1(images: list[ImageContainer]):
-    """Calculate Precision, Recall, and F1 score for a batch of images per class."""
+    """Calculate Macro Precision, Recall, and F1-Score for a batch of images."""
 
     pred_boxes, pred_classes, target_boxes, target_classes = (
         torch.Tensor(),

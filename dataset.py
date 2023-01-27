@@ -1,10 +1,10 @@
 '''Make a PyTorch Dataset for the Home Data Eval Subset.'''
 
 import os
-import pandas as pd
+import pandas as pd # type: ignore
 
-from torchvision.io import read_image
-from torch.utils.data import Dataset
+from torchvision.io import read_image # type: ignore
+from torch.utils.data import Dataset # type: ignore
 
 class HomeDataEvalSubset(Dataset):
     def __init__(self, root_dir, annotations, ontology):

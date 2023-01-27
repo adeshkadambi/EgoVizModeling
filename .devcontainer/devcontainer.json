@@ -1,36 +1,49 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
-	"name": "Python 3",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/python:0-3.11-bullseye",
-	"features": {
-		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {},
-		"ghcr.io/devcontainers-contrib/features/black:2": {},
-		"ghcr.io/devcontainers-contrib/features/mypy:2": {},
-		"ghcr.io/devcontainers-contrib/features/pipx-package:1": {}
-	},
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"formulahendry.code-runner",
-				"GitHub.copilot"
-			]
-		}
-	}
+  "name": "Python 3",
+  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+  "image": "mcr.microsoft.com/devcontainers/python:0-3.10-bullseye",
+  "features": {
+    "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {},
+    "ghcr.io/devcontainers-contrib/features/black:2": {},
+    "ghcr.io/devcontainers-contrib/features/mypy:2": {},
+    "ghcr.io/devcontainers-contrib/features/pipx-package:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "formulahendry.code-runner",
+        "GitHub.copilot",
+        "matangover.mypy"
+      ],
+      "settings": {
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": false,
+        "python.linting.mypyEnabled": true,
+        "python.linting.mypyArgs": [
+          "--ignore-missing-imports",
+          "--follow-imports=silent",
+          "--show-column-numbers"
+        ]
+      }
+    }
+  },
+  "postCreateCommand": "pip3 install --user -r requirements.txt && pip3 install torch torchvision torchaudio && sudo apt update && sudo apt install python3-opencv -y",
+  "runArgs": ["--gpus", "all"]
 
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+  // Features to add to the dev container. More info: https://containers.dev/features.
+  // "features": {},
 
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  // "forwardPorts": [],
 
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "pip3 install --user -r requirements.txt",
+  // Use 'postCreateCommand' to run commands after the container is created.
+  // "postCreateCommand": "pip3 install --user -r requirements.txt",
 
-	// Configure tool-specific properties.
-	// "customizations": {},
+  // Configure tool-specific properties.
+  // "customizations": {},
 
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  // "remoteUser": "root"
 }
