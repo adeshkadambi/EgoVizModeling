@@ -13,10 +13,11 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "formulahendry.code-runner",
-        "GitHub.copilot",
-        "matangover.mypy"
-      ],
+		"formulahendry.code-runner",
+		"GitHub.copilot",
+		"matangover.mypy",
+		"ms-python.black-formatter"
+	],
       "settings": {
         "python.linting.enabled": true,
         "python.linting.pylintEnabled": false,
