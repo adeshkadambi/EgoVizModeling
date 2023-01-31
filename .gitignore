@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 # Datasets
-datasets/
+datasets/home-data-eval/
