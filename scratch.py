@@ -3,7 +3,7 @@
 import pickle
 import json
 
-from dataset import HomeDataEvalSubset
+from utils.dataset import HomeDataEvalSubset
 
 # set root directory
 root = "datasets/home-data-eval/"
