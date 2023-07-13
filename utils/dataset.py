@@ -3,7 +3,7 @@
 import os
 import torch  # type: ignore
 
-from PIL import Image  # type: ignore
+from torchvision.io import read_image  # type: ignore
 from torch.utils.data import Dataset  # type: ignore
 
 
@@ -31,7 +31,7 @@ class HomeDataEvalSubset(Dataset):
     def __getitem__(self, idx: int):
         # load image
         img_path = self.images[idx]
-        img = Image.open(img_path).convert("RGB")
+        img = read_image(img_path)
 
         # get annotation for img
         img_name = os.path.basename(img_path)

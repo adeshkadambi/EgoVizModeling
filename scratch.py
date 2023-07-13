@@ -4,6 +4,7 @@ import pickle
 import json
 
 from utils.dataset import HomeDataEvalSubset
+from torch.utils.data import DataLoader  # type: ignore
 
 # set root directory
 root = "datasets/home-data-eval/"
@@ -18,4 +19,9 @@ annotations = json.load(open("datasets/ground_truth_labels.json"))
 data = HomeDataEvalSubset(root, mapper, annotations)
 
 # test dataset
-print(data[0])
+dataloader = DataLoader(data, batch_size=1, shuffle=True)
+
+img, target = next(iter(dataloader))
+
+print(img.shape)
+print(target)

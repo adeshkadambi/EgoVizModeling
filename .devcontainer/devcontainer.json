@@ -1,23 +1,24 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
-  "name": "Python 3",
+  "name": "Python 3.10",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   "image": "mcr.microsoft.com/devcontainers/python:0-3.10-bullseye",
   "features": {
     "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {},
     "ghcr.io/devcontainers-contrib/features/black:2": {},
     "ghcr.io/devcontainers-contrib/features/mypy:2": {},
-    "ghcr.io/devcontainers-contrib/features/pipx-package:1": {}
+    "ghcr.io/devcontainers-contrib/features/pipx-package:1": {},
+    "ghcr.io/devcontainers/features/nvidia-cuda:1": {}
   },
   "customizations": {
     "vscode": {
       "extensions": [
-		"formulahendry.code-runner",
-		"GitHub.copilot",
-		"matangover.mypy",
-		"ms-python.black-formatter"
-	],
+        "formulahendry.code-runner",
+        "GitHub.copilot",
+        "matangover.mypy",
+        "ms-python.black-formatter"
+      ],
       "settings": {
         "python.linting.enabled": true,
         "python.linting.pylintEnabled": false,
@@ -30,8 +31,19 @@
       }
     }
   },
-  "postCreateCommand": "pip3 install --user -r requirements.txt && pip3 install torch torchvision torchaudio && sudo apt update && sudo apt install python3-opencv -y",
-  "runArgs": ["--gpus", "all"]
+  "postCreateCommand": "pip3 install --user -r requirements.txt && pip3 install torch torchvision torchaudio && pip3 install moviepy && sudo apt update && sudo apt install python3-opencv -y",
+  "runArgs": ["--gpus=all"],
+  "mounts": [
+    {
+      "source": "D:/aim1_data",
+      "target": "/workspaces/cdss-modeling/aim1_data",
+      "type": "bind"
+    }
+  ]
+
+  // "mounts":[
+  //   "source=D:\\aim1_data,target=/workspace/aim1_data,type=bind,consistency=delegated"
+  // ]
 
   // Features to add to the dev container. More info: https://containers.dev/features.
   // "features": {},
