@@ -36,3 +36,46 @@ video_key_p03 = {
         "GOPR0782",
     ],
 }
+
+video_key_p04 = {
+    "2023-01-15": ["GOPR0880", "GOPR0881", "GOPR0930", "GOPR1055", "GP010880"],
+    "2023-01-16": ["GOPR1066", "GOPR1102", "GOPR1122", "GOPR1123"],
+    "2023-01-17": ["GOPR1124", "GOPR1125", "GP011124"],
+    "2023-01-19": ["GOPR1126", "GOPR1127", "GOPR1128"],
+    "2023-01-29": ["GOPR1130", "GOPR1132", "GP011130"],
+    "2023-02-12": ["GOPR1133", "GP011133", "GOPR1142", "GP011142"],
+}
+
+from typing import List
+
+def min_to_decimal(mins: str) -> float:
+    """Converts a string of minutes to a decimal value.
+    
+    Args:
+        mins (str): A string of minutes in the format "MM:SS".
+    
+    Returns:
+        float: A decimal value of minutes.
+    """
+    mins, secs = mins.split(":")
+    return float(mins) + float(secs) / 60
+
+def sum_minutes(mins: List[str]) -> float:
+    """Sums a list of minutes in the format "MM:SS".
+    
+    Args:
+        mins (List[str]): A list of minutes in the format "MM:SS".
+    
+    Returns:
+        float: A decimal value of minutes.
+    """
+    return sum([min_to_decimal(m) for m in mins])
+
+d1 = sum_minutes(["17:42", "11:42", "9:37", "13:23", "7:28"])
+d2 = sum_minutes(["9:31", "6:17", "4:12", "10:19"])
+d3 = sum_minutes(["17:42", "6:12", "8:43"])
+d4 = sum_minutes(["13:29", "15:38", "2:17"])
+d5 = sum_minutes(["17:42", "14:07", "14:10"])
+d6 = sum_minutes(["17:42", "12:43", "17:42", "6:53"])
+
+print(d1, d2, d3, d4, d5, d6)

@@ -32,7 +32,7 @@ class Video:
         cv2.destroyAllWindows()
 
 # change this line to the path of the folder containing the videos
-filepath = "/workspaces/cdss-modeling/shan/videos/P-02/subclips"
+filepath = "/workspaces/cdss-modeling/aim1_data/P-04/subclips"
 
 os.chdir(filepath)
 

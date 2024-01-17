@@ -53,7 +53,7 @@ def save_subclips(video_path, root):
         print("Error: ", e, " for file: ", video_path)
 
 
-filepath = "/workspaces/cdss-modeling/shan/videos/P-04"
+filepath = "/workspaces/cdss-modeling/aim1_data/P-04"
 
 # make a new folder to save subclips within filepath if it doesn't exist
 if not os.path.exists(os.path.join(filepath, "subclips")):

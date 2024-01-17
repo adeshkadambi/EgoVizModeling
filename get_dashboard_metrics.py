@@ -7,7 +7,7 @@ import tqdm
 import json
 
 from typing import Dict, List
-from dashboard_video_key import video_key_p03 as video_key
+from dashboard_video_key import video_key_p04 as video_key
 from dashboard_metrics import (
     interaction_percentage,
     interactions_per_hour,
@@ -48,10 +48,10 @@ for subdir in tqdm.tqdm(subdirs):
         if file.endswith(".pkl"):
             # load the file and append to frames
             try:
-              with open(os.path.join(root, subdir, file), "rb") as p:
-                  frames[video_date].append(pickle.load(p))
+                with open(os.path.join(root, subdir, file), "rb") as p:
+                    frames[video_date].append(pickle.load(p))
             except EOFError:
-              print(f'{os.path.join(root, subdir, file)} is corrupt') # type: ignore
+                print(f"{os.path.join(root, subdir, file)} is corrupt")  # type: ignore
 
 # for each date in frames, compute metrics and store in metrics
 for date, frames_list in frames.items():
@@ -64,5 +64,5 @@ for date, frames_list in frames.items():
 # save metrics to json file and log to console
 print(metrics)
 
-with open("/workspaces/cdss-modeling/aim1_data/P-03/dashboard_metrics.json", "w") as f: # type: ignore
+with open("/workspaces/cdss-modeling/aim1_data/P-04/dashboard_metrics.json", "w") as f:  # type: ignore
     json.dump(metrics, f)
